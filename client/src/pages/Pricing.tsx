@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import { appPlans } from "../assets/assets";
 import Footer from "../components/Footer";
