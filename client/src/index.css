@@ -14,3 +14,15 @@
 .no-scrollbar::-webkit-scrollbar{
   display: none;
 }
+.animate-fade-in{
+  animation: fade-in 0.8s ease-out;
+}
+
+@keyframes fade-in {
+  0%{
+    opacity: 0;
+  }
+  100%{
+    opacity: 100;
+  }
+}

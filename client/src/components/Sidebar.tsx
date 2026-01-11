@@ -25,6 +25,16 @@ function Sidebar({
   const [input, setInput] = useState("");
   const messageEndRef = useRef<HTMLDivElement>(null);
 
+  const handleRevision = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 3000);
+
+    setInput("");
+  };
+
   const handleRollback = async (versionId: string) => {};
   useEffect(() => {
     if (messageEndRef.current) {
@@ -146,7 +156,7 @@ function Sidebar({
           <div ref={messageEndRef} />
         </div>
         {/* input */}
-        <form className="m-3 relative">
+        <form className="m-3 relative" onSubmit={handleRevision}>
           <div className="flex items-center gap-2">
             <textarea
               rows={4}

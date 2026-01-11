@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SoftBackdrop from "../components/SoftBackdrop";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Project } from "../types";
 import {
   ArrowBigDownDashIcon,
@@ -22,6 +22,10 @@ import {
   dummyVersion,
 } from "../assets/assets";
 import Sidebar from "../components/Sidebar";
+import { i } from "framer-motion/client";
+import ProjectPreview, {
+  type ProjectPreviewRef,
+} from "../components/ProjectPreview";
 
 function Projects() {
   const { projectId } = useParams();
@@ -35,7 +39,8 @@ function Projects() {
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(true);
+  const previewRef = useRef<ProjectPreviewRef>(null);
 
   const fetchProject = async () => {
     try {
@@ -50,6 +55,7 @@ function Projects() {
             versions: dummyVersion,
           });
           setLoading(false);
+
           setIsGenerating(project?.current_code ? false : true);
         }
       }, 2000);
@@ -60,7 +66,21 @@ function Projects() {
   };
 
   const togglePublish = async () => {};
-  const downLoadCode = async () => {};
+  const downLoadCode = async () => {
+    const code = previewRef.current?.getCode() || project?.current_code;
+    if (!code) {
+      if (isGenerating) {
+        return;
+      }
+      return;
+    }
+    const element = document.createElement("a");
+    const file = new Blob([code], { type: "text/html" });
+    element.href = URL.createObjectURL(file);
+    element.download = "index.html";
+    document.body.appendChild(element);
+    element.click();
+  };
   const saveProject = async () => {};
 
   useEffect(() => {
@@ -181,7 +201,15 @@ function Projects() {
             project={project}
             setProject={(p) => setProject(p)}
           />
-          <div className="flex-1 p-2 pl-0">Project Preview</div>
+          <div className="flex-1 p-2 pl-0">
+            <ProjectPreview
+              device={device}
+              isGenerating={isGenerating}
+              project={project}
+              showEditorPanel={true}
+              ref={previewRef}
+            />
+          </div>
         </div>
       </div>
     </>
