@@ -8,6 +8,9 @@ import Preview from "./pages/Preview";
 import MyProject from "./pages/MyProject";
 import Navbar from "./components/Navbar";
 import { useLocation } from "react-router-dom";
+import { Toaster } from "sonner";
+import AuthPage from "./pages/auth/AuthPage";
+import Settings from "./pages/Settings";
 
 function App() {
   const { pathname } = useLocation();
@@ -18,8 +21,10 @@ function App() {
   return (
     <>
       {!hideNavbar && <Navbar />}
+      <Toaster />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/auth/:pathname" element={<AuthPage />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/project/:projectId" element={<Projects />} />
         <Route path="/projects" element={<MyProject />} />
@@ -27,6 +32,7 @@ function App() {
         <Route path="/community" element={<Community />} />
         <Route path="/preview/:projectId" element={<Preview />} />
         <Route path="/preview/:projectId/:versionId" element={<Preview />} />
+        <Route path="/account/settings" element={<Settings />} />
       </Routes>
     </>
   );
