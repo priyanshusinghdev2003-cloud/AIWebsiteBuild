@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { toNodeHandler } from "better-auth/node";
+import authRoute from "./routes/userRoute.ts";
 import { auth } from "./lib/auth.ts";
 dotenv.config();
 
@@ -14,9 +15,15 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(
+  express.json({
+    limit: "50mb",
+  })
+);
 
 app.all("/api/auth/{*any}", toNodeHandler(auth));
+
+app.use("/api/user", authRoute);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("server is Live!");
