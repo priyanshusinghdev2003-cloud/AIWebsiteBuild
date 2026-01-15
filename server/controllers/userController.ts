@@ -82,7 +82,7 @@ export const createNewProject = async (req: Request, res: Response) => {
       projectId: project.id,
     });
     const promptEnhanceResponse = await openai.chat.completions.create({
-      model: "z-ai/glm-4.5-air:free",
+      model: "xiaomi/mimo-v2-flash:free",
       messages: [
         {
           role: "system",
@@ -121,7 +121,7 @@ Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3
     });
 
     const codeGenerationresponse = await openai.chat.completions.create({
-      model: "z-ai/glm-4.5-air:free",
+      model: "xiaomi/mimo-v2-flash:free",
       messages: [
         {
           role: "system",
@@ -158,6 +158,25 @@ Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3
     });
 
     const code = codeGenerationresponse.choices[0].message.content || "";
+    if (!code) {
+      await prisma.conversation.create({
+        data: {
+          role: "assistant",
+          content:
+            "I'm sorry, but I was unable to generate code for your request.",
+          projectId: project.id,
+        },
+      });
+      await prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          credits: { increment: 5 },
+        },
+      });
+      return;
+    }
 
     const versions = await prisma.version.create({
       data: {
@@ -291,13 +310,11 @@ export const togglePublish = async (req: Request, res: Response) => {
         isPublished: !project.isPublished,
       },
     });
-    return res
-      .status(200)
-      .json({
-        message: project.isPublished
-          ? "Project unpublished successfully"
-          : "Project published successfully",
-      });
+    return res.status(200).json({
+      message: project.isPublished
+        ? "Project unpublished successfully"
+        : "Project published successfully",
+    });
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({

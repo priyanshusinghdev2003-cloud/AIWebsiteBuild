@@ -56,7 +56,7 @@ export const makeRevision = async (req: Request, res: Response) => {
     });
 
     const promptEnhanceResponse = await openai.chat.completions.create({
-      model: "z-ai/glm-4.5-air:free",
+      model: "xiaomi/mimo-v2-flash:free",
       messages: [
         {
           role: "system",
@@ -93,7 +93,7 @@ Return ONLY the enhanced request, nothing else. Keep it concise (1-2 sentences).
       },
     });
     const codeGenerationResponse = await openai.chat.completions.create({
-      model: "z-ai/glm-4.5-air:free",
+      model: "xiaomi/mimo-v2-flash:free",
       messages: [
         {
           role: "system",
@@ -116,6 +116,25 @@ Return ONLY the enhanced request, nothing else. Keep it concise (1-2 sentences).
       ],
     });
     const code = codeGenerationResponse.choices[0].message.content || "";
+    if (!code) {
+      await prisma.conversation.create({
+        data: {
+          role: "assistant",
+          content:
+            "I'm sorry, but I was unable to generate code for your request.",
+          projectId: projectId as string,
+        },
+      });
+      await prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          credits: { increment: 5 },
+        },
+      });
+      return;
+    }
     const versions = await prisma.version.create({
       data: {
         code: code
@@ -265,6 +284,91 @@ export const getProjectCodePreview = async (req: Request, res: Response) => {
     }
     res.status(200).json({
       project,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.status(500).json({
+      message: error.code || error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getAllPublishedProject = async (req: Request, res: Response) => {
+  try {
+    const projects = await prisma.websiteProject.findMany({
+      where: {
+        isPublished: true,
+      },
+      include: {
+        user: true,
+      },
+    });
+    res.status(200).json({
+      projects,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.status(500).json({
+      message: error.code || error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getSingleProjectById = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const project = await prisma.websiteProject.findUnique({
+      where: {
+        id: projectId as string,
+      },
+    });
+    if (!project || project.isPublished === false || !project?.current_code) {
+      return res
+        .status(404)
+        .json({ message: "Project Not Found or Not Published" });
+    }
+    res.status(200).json({
+      code: project.current_code,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.status(500).json({
+      message: error.code || error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const saveProject = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { projectId } = req.params;
+    const { code } = req.body;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!code) {
+      return res.status(400).json({ message: "Code is required" });
+    }
+    const project = await prisma.websiteProject.findUnique({
+      where: {
+        id: projectId as string,
+        userId,
+      },
+    });
+    if (!project) {
+      return res.status(404).json({ message: "Project Not Found" });
+    }
+    await prisma.websiteProject.update({
+      where: {
+        id: projectId as string,
+      },
+      data: {
+        current_code: code,
+        current_version_index: "",
+      },
+    });
+    res.status(200).json({
+      message: "Project Saved Successfully",
     });
   } catch (error: any) {
     console.log(error);

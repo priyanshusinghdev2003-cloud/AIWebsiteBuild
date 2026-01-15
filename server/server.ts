@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { toNodeHandler } from "better-auth/node";
 import authRoute from "./routes/userRoute.ts";
+import projectRoute from "./routes/projectRoute.ts";
 import { auth } from "./lib/auth.ts";
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(
 app.all("/api/auth/{*any}", toNodeHandler(auth));
 
 app.use("/api/user", authRoute);
+app.use("/api/project", projectRoute);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("server is Live!");

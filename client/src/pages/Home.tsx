@@ -3,23 +3,42 @@ import React from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import { Loader2Icon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
+import api from "@/configs/axios";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const { data: session } = authClient.useSession();
+  const navigate = useNavigate();
 
   const onSubmitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     try {
-      console.log("loading");
-      setTimeout(() => {
-        console.log(input);
+      if (!session?.user) {
+        toast.error("You are not logged in");
+        return;
+      } else if (!input.trim()) {
+        toast.error("Please enter a valid input");
+        return;
+      } else {
+        setLoading(true);
+        const { data } = await api.post("/user/project", {
+          initial_prompt: input,
+        });
         setLoading(false);
-      }, 3000);
-      console.log(loading);
-    } catch (error) {
-      console.error(error);
+        setInput("");
+        navigate(`/project/${data.projectId}`);
+      }
+    } catch (error: any) {
+      setLoading(false);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong"
+      );
     }
   };
 

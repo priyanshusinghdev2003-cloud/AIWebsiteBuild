@@ -5,18 +5,22 @@ import { dummyProjects } from "../assets/assets";
 import { Loader2Icon, PlusIcon, TrashIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
+import api from "@/configs/axios";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 function MyProject() {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const navigate = useNavigate();
+  const { data: session, isPending } = authClient.useSession();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const data = dummyProjects;
-      setProjects(data);
+      const { data } = await api.get("/user/projects");
+      setProjects(data?.project);
     } catch (error) {
       console.error(error);
     } finally {
@@ -25,24 +29,31 @@ function MyProject() {
   };
   const handleDelete = async (projectId: string) => {
     try {
+      const confirm = window.confirm(
+        "Are you sure you want to delete this project?"
+      );
+      if (!confirm) return;
       setLoading(true);
       setIsDeleting(projectId);
-      const data = dummyProjects.filter((project) => project.id !== projectId);
-      setTimeout(() => {
-        setProjects(data);
-        setIsDeleting(null);
-      }, 1000);
-    } catch (error) {
-      console.error(error);
+      const { data } = await api.delete(`/project/${projectId}`);
+      toast.success(data?.message);
+      fetchProjects();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
+      setIsDeleting(null);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
-  console.log(projects);
+    if (session?.user && !isPending) {
+      fetchProjects();
+    } else if (!isPending && !session?.user) {
+      navigate("/");
+      toast.error("Please login to view your projects");
+    }
+  }, [session?.user]);
 
   return (
     <>

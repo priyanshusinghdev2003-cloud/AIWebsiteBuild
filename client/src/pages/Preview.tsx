@@ -1,36 +1,42 @@
 import { useEffect, useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import { useParams } from "react-router-dom";
-import { dummyProjects } from "../assets/assets";
 import { Loader2Icon } from "lucide-react";
 import ProjectPreview from "../components/ProjectPreview";
-import type { Project } from "../types";
+import type { Project, Version } from "../types";
+import api from "@/configs/axios";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 function Preview() {
   const [code, setCode] = useState<string>("");
   const { projectId, versionId } = useParams();
   const [loading, setLoading] = useState<boolean>(true);
+  const { data: session, isPending } = authClient.useSession();
 
   const fetchCode = async () => {
     try {
-      setTimeout(() => {
-        const project = dummyProjects.find(
-          (project) => project.id === projectId
-        )?.current_code;
-        if (project) {
-          setCode(project);
-          setLoading(false);
-        }
-      }, 2000);
-    } catch (error) {
-      console.error(error);
+      const { data } = await api.get(`/project/preview/${projectId}`);
+      setCode(data?.project?.current_code);
+      if (versionId) {
+        data.project?.versions.forEach((version: Version) => {
+          if (version.id === versionId) {
+            setCode(version.code);
+          }
+        });
+      }
+      setLoading(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch code");
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCode();
-  }, []);
+    if (session?.user && !isPending) {
+      fetchCode();
+    }
+  }, [session?.user]);
 
   if (loading) {
     return (

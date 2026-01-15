@@ -8,6 +8,8 @@ import {
   UserIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import api from "@/configs/axios";
+import { toast } from "sonner";
 
 function Sidebar({
   isMenuOpen,
@@ -25,17 +27,68 @@ function Sidebar({
   const [input, setInput] = useState("");
   const messageEndRef = useRef<HTMLDivElement>(null);
 
-  const handleRevision = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-    }, 3000);
-
-    setInput("");
+  const fetchProject = async () => {
+    try {
+      const { data } = await api.get(`/user/project/${project.id}`);
+      setProject(data.project);
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Something went wrong"
+      );
+    }
   };
 
-  const handleRollback = async (versionId: string) => {};
+  const handleRevision = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    let interval: number | undefined;
+    try {
+      setIsGenerating(true);
+      interval = setInterval(() => {
+        fetchProject();
+      }, 10000);
+      const { data } = await api.post(`/project/revision/${project.id}`, {
+        message: input,
+      });
+      fetchProject();
+      toast.success(data?.message);
+      setInput("");
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Something went wrong"
+      );
+    } finally {
+      clearInterval(interval);
+      setIsGenerating(false);
+    }
+  };
+
+  const handleRollback = async (versionId: string) => {
+    try {
+      const confirm = window.confirm(
+        "Are you sure you want to rollback to this version?"
+      );
+      if (!confirm) return;
+      setIsGenerating(true);
+      const { data } = await api.get(
+        `/project/rollback/${project.id}/${versionId}`
+      );
+      const { data: data2 } = await api.get(`/user/project/${project.id}`);
+      setProject(data2.project);
+      toast.success(data?.message);
+      setIsGenerating(false);
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Something went wrong"
+      );
+      setIsGenerating(false);
+    }
+  };
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });

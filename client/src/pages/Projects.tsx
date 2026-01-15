@@ -16,20 +16,18 @@ import {
   TabletIcon,
   XIcon,
 } from "lucide-react";
-import {
-  dummyConversations,
-  dummyProjects,
-  dummyVersion,
-} from "../assets/assets";
 import Sidebar from "../components/Sidebar";
-import { i } from "framer-motion/client";
 import ProjectPreview, {
   type ProjectPreviewRef,
 } from "../components/ProjectPreview";
+import { toast } from "sonner";
+import api from "@/configs/axios";
+import { authClient } from "@/lib/auth-client";
 
 function Projects() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { data: session, isPending } = authClient.useSession();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,33 +37,43 @@ function Projects() {
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const previewRef = useRef<ProjectPreviewRef>(null);
 
   const fetchProject = async () => {
     try {
-      const projectData = dummyProjects.find(
-        (project) => project.id === projectId
+      const { data } = await api.get(`/user/project/${projectId}`);
+      setProject(data.project);
+      setIsGenerating(data.project.current_code ? false : true);
+      setLoading(false);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Error fetching project:"
       );
-      setTimeout(() => {
-        if (projectData) {
-          setProject({
-            ...projectData,
-            conversation: dummyConversations,
-            versions: dummyVersion,
-          });
-          setLoading(false);
-
-          setIsGenerating(project?.current_code ? false : true);
-        }
-      }, 2000);
-    } catch (error) {
-      console.error("Error fetching project:", error);
       setLoading(false);
     }
   };
 
-  const togglePublish = async () => {};
+  const togglePublish = async () => {
+    if (!previewRef.current) return;
+    const code = previewRef.current.getCode();
+    if (!code) return;
+    try {
+      const { data } = await api.get(`/user/publish-toggle/${projectId}`);
+      toast.success(data?.message);
+      setProject((prev) =>
+        prev ? { ...prev, published: !prev.isPublished } : null
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Something went wrong"
+      );
+    }
+  };
   const downLoadCode = async () => {
     const code = previewRef.current?.getCode() || project?.current_code;
     if (!code) {
@@ -81,13 +89,42 @@ function Projects() {
     document.body.appendChild(element);
     element.click();
   };
-  const saveProject = async () => {};
+  const saveProject = async () => {
+    if (!previewRef.current) return;
+    const code = previewRef.current.getCode();
+    if (!code) return;
+    try {
+      setIsSaving(true);
+      const { data } = await api.put(`/project/save/${projectId}`, { code });
+      toast.success(data?.message);
+      setIsSaving(false);
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Something went wrong"
+      );
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
-    if (projectId) {
+    if (session?.user) {
       fetchProject();
+    } else if (!isPending && !session?.user) {
+      navigate("/");
+      toast.error("You are not logged in");
     }
-  }, [projectId]);
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (project && !project?.current_code) {
+      const intervalId = setInterval(() => {
+        fetchProject();
+      }, 10000);
+      return () => clearInterval(intervalId);
+    }
+  }, [project]);
   if (loading) {
     return (
       <>
