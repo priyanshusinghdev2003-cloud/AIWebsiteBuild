@@ -2,6 +2,9 @@ import { useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import { appPlans } from "../assets/assets";
 import Footer from "../components/Footer";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
+import api from "@/configs/axios";
 
 interface Plan {
   id: string;
@@ -13,8 +16,18 @@ interface Plan {
 }
 function Pricing() {
   const [plans] = useState<Plan[]>(appPlans);
-  const handlePurchase = (planId: string) => {
-    console.log(planId);
+  const { data: session } = authClient.useSession();
+  const handlePurchase = async (planId: string) => {
+    try {
+      if (!session?.user) {
+        toast.info("Please login to purchase a plan");
+        return;
+      }
+      const { data } = await api.post("/user/purchase-credit", { planId });
+      window.location.href = data.payment_link;
+    } catch (error: any) {
+      toast.error(error?.message || "Something went wrong");
+    }
   };
   return (
     <>

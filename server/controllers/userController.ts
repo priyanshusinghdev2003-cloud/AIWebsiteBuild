@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma.ts";
 import openai from "../config/openAI.ts";
+import Stripe from "stripe";
+import "dotenv/config";
 
 export const getUserCredits = async (req: Request, res: Response) => {
   try {
@@ -325,12 +327,70 @@ export const togglePublish = async (req: Request, res: Response) => {
 
 export const purchaseCredit = async (req: Request, res: Response) => {
   try {
+    interface Plan {
+      credits: number;
+      amount: number;
+    }
+    const plans = {
+      basic: {
+        credits: 100,
+        amount: 5,
+      },
+      pro: {
+        credits: 400,
+        amount: 19,
+      },
+      enterprise: {
+        credits: 1000,
+        amount: 49,
+      },
+    };
+
     const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
+    const { planId } = req.body as { planId: keyof typeof plans };
+    const origin = req.headers.origin as string;
+    const plan: Plan = plans[planId];
+    if (!plan) {
+      return res.status(400).json({ message: "Plan not found" });
+    }
 
-    return res.status(200).json({ message: "Credit purchased successfully" });
+    const transition = await prisma.transaction.create({
+      data: {
+        userId: userId!,
+        planId: req.body.planId,
+        amount: plan.amount,
+        credits: plan.credits,
+      },
+    });
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    const session = await stripe.checkout.sessions.create({
+      success_url: `${origin}/loading`,
+      cancel_url: `${origin}/`,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `AISiteBuilder - ${plan.credits} credits`,
+            },
+            unit_amount: Math.floor(transition.amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      metadata: {
+        transactionId: transition.id,
+        appId: "ai-site-builder",
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
+    });
+
+    res.status(200).json({ payment_link: session.url });
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({

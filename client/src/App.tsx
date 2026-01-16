@@ -11,7 +11,7 @@ import { useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import AuthPage from "./pages/auth/AuthPage";
 import Settings from "./pages/Settings";
-
+import Loading from "./pages/loading";
 function App() {
   const { pathname } = useLocation();
   const hideNavbar =
@@ -33,6 +33,7 @@ function App() {
         <Route path="/preview/:projectId" element={<Preview />} />
         <Route path="/preview/:projectId/:versionId" element={<Preview />} />
         <Route path="/account/settings" element={<Settings />} />
+        <Route path="/loading" element={<Loading />} />
       </Routes>
     </>
   );
