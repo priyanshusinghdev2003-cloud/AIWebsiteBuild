@@ -1,10 +1,11 @@
 import { useParams } from "react-router-dom";
 import SoftBackdrop from "../components/SoftBackdrop";
 import { useEffect, useState } from "react";
-import { dummyProjects } from "../assets/assets";
 import { Loader2Icon } from "lucide-react";
 import ProjectPreview from "../components/ProjectPreview";
 import type { Project } from "../types";
+import { toast } from "sonner";
+import api from "@/configs/axios";
 
 function View() {
   const { projectId } = useParams();
@@ -13,18 +14,13 @@ function View() {
 
   const fetchCode = async () => {
     try {
-      const project = dummyProjects.find(
-        (project) => project.id === projectId
-      )?.current_code;
-      setTimeout(() => {
-        if (project) {
-          setCode(project);
-          setLoading(false);
-        }
-      }, 2000);
+      const { data } = await api.get(`/project/published/${projectId}`);
+      setCode(data?.code);
+      setLoading(false);
     } catch (error) {
       console.error(error);
       setLoading(false);
+      toast.error("Something went wrong");
     }
   };
 

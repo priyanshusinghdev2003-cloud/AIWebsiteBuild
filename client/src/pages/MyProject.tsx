@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import type { Project } from "../types";
-import { dummyProjects } from "../assets/assets";
 import { Loader2Icon, PlusIcon, TrashIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";

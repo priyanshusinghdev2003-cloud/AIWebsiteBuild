@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
 import type { Project } from "../types";
-import { dummyProjects } from "../assets/assets";
 import { Loader2Icon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
+import api from "@/configs/axios";
 
 function Community() {
   const [loading, setLoading] = useState(false);
@@ -14,8 +14,8 @@ function Community() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const data = dummyProjects;
-      setProjects(data);
+      const { data } = await api.get("/project/published");
+      setProjects(data.projects);
     } catch (error) {
       console.error(error);
     } finally {
